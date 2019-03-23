@@ -1,0 +1,247 @@
+---
+title: "Linear regression Adverstising data"
+output:
+  word_document: default
+  html_notebook: default
+---
+
+Linear Regression
+
+
+```{r}
+library(MASS)
+```
+
+```{r}
+library(ISLR)
+```
+
+```{r}
+Advertising<-read.csv("Advertising.csv")
+wd <- getwd(); file <- paste(wd,"Advertising.csv",sep="/")
+Advertising<-read.csv(file, head=TRUE)[,-1]
+```
+
+Advertising data sales (in thousands of units) for a particular product advertising budgets (in thousands of dollars) for TV, radio, and newspaper media
+
+
+On the basis of this data,suggest a marketing plan for next year that will result in high product sales.
+
+
+```{r}
+head(Advertising)
+```
+
+```{r}
+summary(Advertising)
+```
+
+```{r}
+pairs(Advertising, pch=".") 
+```
+
+
+
+
+1. Is there a relationship between advertising sales and budget?
+
+A multiple regression model of sales onto TV, radio, and newspaper
+```{r}
+ad.lm <- lm(Sales~., data=Advertising)
+summary(ad.lm)
+```
+
+Test hypothesis H0 : beat_TV = beta_radio = beta_newspaper = 0.
+F-test indicates clear evidence of a relationship between advertising and sales
+
+2. How strong is the relationship?
+
+Two measures of model accuracy:RSE and R^2 RSE: Residual (y-yhat) standard error
+
+
+
+```{r}
+rse=summary(ad.lm)$sigma
+
+#RSE= 1.686 
+mean(Advertising$Sales) 
+```
+
+```{r}
+rse/mean(Advertising$Sales) 
+
+```
+
+```{r}
+# noisy/signal=.12 
+#percentage error wrt mean is roughly 12 %. 
+#
+
+rsq=summary(ad.lm)$r.sq
+rsq #0.8972106
+```
+The predictors explain almost 90 % of the variance in sales
+
+
+```{r}
+# rsq is calculated by the following formuala
+yhat=ad.lm$fitted.values #predicted 
+y=Advertising$Sales #observed 
+rsq=1-sum((y-yhat)^2)/sum((y-mean(y))^2) #orginal formula
+
+
+#Other way to get R2
+var(yhat)/var(y) #other formula
+```
+
+```{r}
+1-sum((y-yhat)^2)/sum((y-mean(y))^2) #orginal formula 
+
+```
+
+```{r}
+cor(yhat,y)^2 #alternate formula
+
+```
+They are equal for linear regression model.
+
+
+
+3. Which media contribute to sales?
+
+```{r}
+Coef1=summary(ad.lm)$coefficients #Coefficient matrix
+Coef1
+
+```
+Examining the p-values associated with each predictor's t-statistic, the p-values for TV and radio are low, but the p-value for newspaper is not. This suggests that only TV and radio are related to sales.
+
+
+
+4. How large is the effect of each medium on sales?
+
+```{r}
+lolim=Coef1[,1] - 1.96*Coef1[,2]
+uplim=Coef1[,1] + 1.96*Coef1[,2]
+cbind(lolim,uplim)
+```
+
+```{r}
+confint(ad.lm)
+
+```
+
+The confidence intervals for TV and radio are narrow and far from zero, providing evidence that these media are related to sales. But the interval for newspaper includes zero, indicating that the variable is not statistically significant given the values of TV and radio.
+
+Could collinearity be the reason that the confidence interval associated with newspaper is so wide?
+Variation Inflation factor (vif) measures collinearity:
+vif(betaj hat)=1/(1-R^2) where R^2 is from the regression of Xj all the other predictors. Rule of thumb: vif>5 or 10 indicates problematic collinearity.
+
+
+
+```{r}
+require(car)
+```
+
+```{r}
+vif(ad.lm)
+```
+
+The VIF scores are 1.005, 1.145, and 1.145 for TV, radio, and newspaper, suggesting no evidence of collinearity.
+
+
+
+
+5. How accurately can we predict future sales?
+For individual response, I use a prediction interval, and for the average response, f(X) for the average response f(X)
+
+
+```{r}
+#for the  average  response f(X)
+predict(ad.lm, newdata=data.frame(TV=149,Radio=22,Newspaper=25),
+        interval="confidence")
+```
+
+```{r}
+#for individual  response
+predict(ad.lm, newdata=data.frame(TV=149,Radio=22,Newspaper=25),
+        interval="prediction")
+```
+Prediction intervals are always wider than confidence intervals because they account for the uncertainty associated with epsilon e, the irreducible error.
+
+6. Is the relationship linear?
+If the relationships are linear, then the residual plots should display no pattern.
+```{r}
+plot(ad.lm) #diagnostic plot
+
+```
+
+7. Is there synergy among the advertising media?
+non-additive relationships model
+
+
+
+```{r}
+ad.lm2 <- lm(Sales~.^2, data=Advertising)
+summary(ad.lm2)
+```
+
+The Advertising data may not be additive.
+
+```{r}
+summary(ad.lm2)$r.sq;summary(ad.lm)$r.sq 
+
+```
+
+Including an interaction term in the model results in a substantial increase in R2, from around 90 % to almost 97 %.
+
+
+Non-linear Transformations of the Predictors
+
+```{r}
+ad.lm3 <- lm(Sales~.+I(TV^2), data=Advertising)
+summary(ad.lm3)
+```
+
+```{r}
+anova(ad.lm,ad.lm3)
+```
+
+```{r}
+#Indicates the non-linear effect of TV
+
+par(mfrow=c(2,2))
+plot(ad.lm3)
+```
+```{r}
+ad.lm4 <- lm(Sales~.+poly(TV,3), data=Advertising)
+summary(ad.lm4)
+```
+
+```{r}
+anova(ad.lm,ad.lm4)
+```
+
+```{r}
+anova(ad.lm3,ad.lm4)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(ad.lm4)
+```
+
+```{r}
+ad.lm5 <- lm(Sales~.+poly(TV,3)+poly(Radio,3), data=Advertising)
+plot(ad.lm5)
+```
+
+
+```{r}
+anova(ad.lm4,ad.lm5)
+```
+
+
+
+
+
