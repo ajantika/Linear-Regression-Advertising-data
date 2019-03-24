@@ -7,8 +7,8 @@ On the basis of this data,suggest a marketing plan for next year that will resul
 
 Answering Following question-
 ### 1.	Is there a relationship between advertising sales and budget?
-### 2.	How strong is the relationship?
-### 3.	Which media contribute to sales?
+### 2.	Simple Linear Regression
+### 3.  Multiple Linear regression
 ### 4.	How large is the effect of each medium on sales?
 ### 5.	How accurately can we predict future sales? 
 ### 6.	Is the relationship linear? 
