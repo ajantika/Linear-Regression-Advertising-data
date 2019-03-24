@@ -1,0 +1,240 @@
+---
+title: "R Notebook"
+output:
+  word_document: default
+  html_notebook: default
+---
+
+```{r}
+# Packages
+library(tidyverse)  # data manipulation and visualization
+library(modelr)     # provides easy pipeline modeling functions
+library(broom)      # helps to tidy up model outputs
+```
+
+Load the Data:
+```{r}
+Advertising<-read.csv("Advertising.csv")
+```
+
+
+Preparing our Data
+
+-Diving the data into train and test
+```{r}
+set.seed(123)
+sample <- sample(c(TRUE, FALSE), nrow(Advertising), replace = T, prob = c(0.6,0.4))
+train <- Advertising[sample, ]
+test <- Advertising[!sample, ]
+
+```
+
+
+
+Simple Linear Regression
+
+
+Y = ??0 + ??1X + ??
+
+
+where:
+
+Y represents sales
+X represents TV advertising budget
+??0 is the intercept
+??1 is the coefficient (slope term) representing the linear relationship
+?? is a mean-zero random error term
+
+Model Building
+To build this model in R we use the formula notation of 
+Y ~ X
+
+```{r}
+model1 <- lm(Sales ~ TV, data = train)
+
+```
+
+
+```{r}
+summary(model1)
+
+```
+
+Y= 6.76 + 0.05X +??
+
+```{r}
+tidy(model1)
+```
+
+
+```{r}
+confint(model1)
+
+```
+
+Our results show us that our 95% confidence interval for ??1 (TV) is [.043, .057]. 
+
+
+RSE: 
+
+```{r}
+sigma(model1)
+
+```
+
+
+R^2 (R-Square)
+
+
+```{r}
+rsquare(model1, data = train)
+
+```
+
+```{r}
+ggplot(train, aes(TV, Sales)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  geom_smooth(se = FALSE, color = "red")
+```
+
+```{r}
+# add model diagnostics to our training data
+model1_results <- augment(model1, train)
+
+ggplot(model1_results, aes(.fitted, .resid)) +
+  geom_ref_line(h = 0) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  ggtitle("Residuals vs Fitted")
+```
+
+```{r}
+p1 <- ggplot(model1_results, aes(.fitted, .std.resid)) +
+  geom_ref_line(h = 0) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  ggtitle("Standardized Residuals vs Fitted")
+
+p2 <- ggplot(model1_results, aes(.fitted, sqrt(.std.resid))) +
+  geom_ref_line(h = 0) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  ggtitle("Scale-Location")
+
+gridExtra::grid.arrange(p1, p2, nrow = 1)
+```
+
+
+Multiple Regression
+
+
+```{r}
+model2 <- lm(Sales ~ TV + Radio + Newspaper, data = train)
+```
+
+```{r}
+summary(model2)
+
+```
+
+Coefficients for TV and Radio advertising budget are statistically significant (p-value < 0.05) while the coefficient for Newspaper is not. Thus, changes in Newspaper budget do not appear to have a relationship with changes in sales.
+
+
+
+```{r}
+tidy(model2)
+
+```
+
+```{r}
+confint(model2)
+
+```
+
+
+Assessing Model Accuracy
+
+```{r}
+list(model1 = broom::glance(model1), model2 = broom::glance(model2))
+
+```
+
+
+1. R^2: Model 2's R^2 =.92 is substantially higher than model 1 suggesting that model 2 does a better job explaining the variance in sales.
+2. RSE: Model 2's RSE (sigma) is lower than model 1. This shows that model 2 reduces the variance of our ??  parameter which corroborates our conclusion that model 2 does a better job modeling sales.
+3. F-statistic: the F-statistic (statistic) in model 2 is larger than model 1. Here larger is better and suggests that model 2 provides a better "goodness-of-fit".
+
+
+Assessing Our Model Visually
+
+```{r}
+# add model diagnostics to our training data
+model1_results <- model1_results %>%
+  mutate(Model = "Model 1")
+
+model2_results <- augment(model2, train) %>%
+  mutate(Model = "Model 2") %>%
+  rbind(model1_results)
+
+ggplot(model2_results, aes(.fitted, .resid)) +
+  geom_ref_line(h = 0) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  facet_wrap(~ Model) +
+  ggtitle("Residuals vs Fitted")
+```
+
+Making Predictions
+
+
+```{r}
+test %>%
+  gather_predictions(model1, model2) %>%
+  group_by(model) %>%
+  summarise(MSE = mean((Sales-pred)^2))
+```
+
+ Is there synergy among the advertising media?
+ 
+```{r}
+# option A
+model3 <- lm(Sales ~ TV + Radio + TV * Radio, data = train)
+
+# option B
+model3 <- lm(Sales ~ TV * Radio, data = train)
+```
+ 
+```{r}
+tidy(model3)
+
+```
+
+
+Assessing Model Accuracy
+```{r}
+list(model1 = broom::glance(model1), 
+     model2 = broom::glance(model2),
+     model3 = broom::glance(model3))
+```
+We can compare our model results across all three models. We see that our adjusted R2 and F-statistic are highest with model 3 and our RSE, AIC, and BIC are the lowest with model 3; all suggesting the model 3 out performs the other models.
+
+
+
+Assessing Our Model Visually
+
+
+```{r}
+# add model diagnostics to our training data
+model3_results <- augment(model3, train) %>%
+  mutate(Model = "Model 3") %>%
+  rbind(model2_results)
+
+ggplot(model3_results, aes(.fitted, .resid)) +
+  geom_ref_line(h = 0) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  facet_wrap(~ Model) +
+  ggtitle("Residuals vs Fitted")
+```
+
