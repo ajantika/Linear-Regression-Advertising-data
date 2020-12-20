@@ -5,7 +5,7 @@ Priblem Statement- Advertising data sales (in thousands of units) for a particul
 On the basis of this data,suggest a marketing plan for next year that will result in high product sales.
 
 
-Answering Following question-
+Answering Following question:
 ### 1.	Is there a relationship between advertising sales and budget?
 ### 2.	Simple Linear Regression
 ### 3.  Multiple Linear regression
